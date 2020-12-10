@@ -69,7 +69,6 @@ class NumericCtrl(wx.TextCtrl):
             self.set_float(self.get_float() - (self.increment * 10))
         else:
             return None  # Don't skip.
-        print(keycode)
         event.Skip()
         f = self.get_float()
         e = FloatEvent(name=self.GetName(), value=f)

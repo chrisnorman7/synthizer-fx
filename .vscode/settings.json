@@ -8,6 +8,7 @@
         "isalnum",
         "isdigit",
         "pyinstaller",
+        "pyperclip",
         "pytest",
         "saveas"
     ]

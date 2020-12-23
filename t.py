@@ -15,3 +15,12 @@ s.add_generator(g)
 
 def f(thing):
     return sorted(x for x in dir(thing) if not x.startswith('_'))
+
+
+class P:
+    def __repr__(self) -> None:
+        g.position = 0.0
+        return 'Restarted'
+
+
+p = P()

@@ -1,5 +1,7 @@
 """Test the reverb module."""
 
+from time import sleep
+
 from synthizer import Context, GlobalFdnReverb
 
 from synthizer_fx.reverb import ReverbDict, reverb_from_dict, reverb_to_dict
@@ -10,11 +12,10 @@ def test_reverb_to_dict(reverb: GlobalFdnReverb) -> None:
     d: ReverbDict = reverb_to_dict(reverb, name='test')
     assert d['name'] == 'test'
     assert d['gain'] == reverb.gain
-    assert d['input_filter_cutoff'] == reverb.input_filter_cutoff
-    assert d['input_filter_enabled'] == reverb.input_filter_enabled
     assert d['late_reflections_delay'] == reverb.late_reflections_delay
     assert d['late_reflections_diffusion'] == reverb.late_reflections_diffusion
-    # Ignore late_reflections_hf_reference
+    assert d['late_reflections_hf_reference'] == \
+        reverb.late_reflections_hf_reference
     assert d['late_reflections_hf_rolloff'] == \
         reverb.late_reflections_hf_rolloff
     assert d['late_reflections_lf_reference'] == \
@@ -34,10 +35,13 @@ def test_reverb_from_dict(context: Context) -> None:
     d: ReverbDict = {
         't60': 4.5,
         'name': 'Testing',
-        'input_filter_enabled': True,
-        'gain': 0.25
+        'gain': 0.25,
+        'late_reflections_hf_reference': 250.0
     }
     r: GlobalFdnReverb = reverb_from_dict(context, d)
+    sleep(0.5)
     assert r.gain == d['gain']
-    assert r.input_filter_enabled is True
     assert r.t60 == d['t60']
+    assert r.late_reflections_hf_reference == d[
+        'late_reflections_hf_reference'
+    ]

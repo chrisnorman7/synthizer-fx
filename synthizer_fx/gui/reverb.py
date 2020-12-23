@@ -6,8 +6,8 @@ from typing import Dict, List, Optional, cast
 
 import wx
 from pyperclip import copy
-from synthizer import (Buffer, BufferGenerator, Context, DirectSource,
-                       GlobalFdnReverb, SynthizerError)
+from synthizer import (Context, DirectSource, GlobalFdnReverb,
+                       StreamingGenerator, SynthizerError)
 from yaml import FullLoader, dump, load
 
 from ..reverb import ReverbDict, ReverbValue, reverb_from_dict, reverb_to_dict
@@ -19,13 +19,6 @@ default_preset_name: str = 'Untitled Preset'
 settings: List[Setting] = [
     Setting(
         'gain', 'The volume of the reverb', bounds=Bounds(0.0, 1.0)
-    ),
-    Setting(
-        'input_filter_enabled', 'Whether or not the input filter is enabled'
-    ),
-    Setting(
-        'input_filter_cutoff', 'The cutoff of the input filter',
-        bounds=Bounds(0.0, 22050.0)
     ),
     Setting(
         'mean_free_path', 'The mean free path of the simulated environment',
@@ -46,10 +39,10 @@ settings: List[Setting] = [
         'late_reflections_hf_rolloff', 'A multiplicative factor on T60 for '
         'the high frequency band', bounds=Bounds(0.0, 2.0)
     ),
-    # Setting(
-    #     'late_reflections_hf_reference', 'Where the high band of the '
-    #     'equalizer starts', bounds=Bounds(0.0, 22050.0)
-    # ),
+    Setting(
+        'late_reflections_hf_reference', 'Where the high band of the '
+        'equalizer starts', bounds=Bounds(0.0, 22050.0)
+    ),
     Setting(
         'late_reflections_diffusion', 'Controls the diffusion of the late '
         'reflections as a percent', bounds=Bounds(0.0, 1.0)
@@ -75,7 +68,7 @@ class ReverbFrame(wx.Frame):
     """A frame for configuring reverb."""
 
     context: Context
-    generator: BufferGenerator
+    generator: Optional[StreamingGenerator] = None
     source: DirectSource
     reverb: GlobalFdnReverb
     controls: Dict[str, wx.Control]
@@ -88,9 +81,7 @@ class ReverbFrame(wx.Frame):
     def __init__(self, context: Context) -> None:
         """Initialise the frame."""
         self.context = context
-        self.generator = BufferGenerator(context)
         self.source = DirectSource(context)
-        self.source.add_generator(self.generator)
         self.reverb = GlobalFdnReverb(context)
         context.config_route(self.source, self.reverb)
         super().__init__(None, title='Reverb')
@@ -135,6 +126,7 @@ class ReverbFrame(wx.Frame):
         self.loop_ctrl.Bind(wx.EVT_CHECKBOX, self.set_looping)
         sizer.Add(self.loop_ctrl, 1, wx.GROW)
         self.restart_ctrl = wx.Button(p, label='&Restart Audio')
+        self.restart_ctrl.Disable()
         self.restart_ctrl.Bind(wx.EVT_BUTTON, self.restart_audio)
         sizer.Add(self.restart_ctrl, 1, wx.GROW)
         s.Add(sizer, 1, wx.GROW)
@@ -228,11 +220,13 @@ class ReverbFrame(wx.Frame):
 
     def set_looping(self, event: wx.CommandEvent) -> None:
         """Set looping state."""
-        self.generator.looping = event.IsChecked()
+        if self.generator is not None:
+            self.generator.looping = event.IsChecked()
 
     def restart_audio(self, event: wx.CommandEvent) -> None:
         """Restart audio."""
-        self.generator.position = 0.0
+        if self.generator is not None:
+            self.generator.position = 0.0
 
     def open_sound(self, event: wx.MenuEvent) -> None:
         """Load a sound to test the reverb."""
@@ -241,8 +235,15 @@ class ReverbFrame(wx.Frame):
         ) as dlg:
             if dlg.ShowModal() == wx.ID_OK:
                 path: str = dlg.GetPath()
+                if self.generator is not None:
+                    self.source.remove_generator(self.generator)
                 try:
-                    self.generator.buffer = Buffer.from_stream('file', path)
+                    self.generator = StreamingGenerator(
+                        self.context, 'file', path
+                    )
+                    self.generator.looping = self.loop_ctrl.GetValue()
+                    self.source.add_generator(self.generator)
+                    self.restart_ctrl.Enable()
                 except SynthizerError as e:
                     wx.MessageBox(
                         'Error opening file %s: %s.' % (path, e), 'Error',
@@ -271,7 +272,8 @@ class ReverbFrame(wx.Frame):
             caption='Are you sure?', style=wx.YES_NO | wx.ICON_EXCLAMATION
         ) == wx.YES:
             with wx.FileDialog(
-                self, wildcard='*.yaml', style=wx.FD_OPEN
+                self, wildcard='*.yaml', style=wx.FD_OPEN,
+                message='Open Preset File'
             ) as dlg:
                 if dlg.ShowModal() == wx.ID_OK:
                     self.filename = cast(str, dlg.GetPath())

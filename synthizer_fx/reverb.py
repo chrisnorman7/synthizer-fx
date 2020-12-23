@@ -22,12 +22,9 @@ def reverb_to_dict(
     return {
         'name': name,
         'gain': reverb.gain,
-        'input_filter_cutoff': reverb.input_filter_cutoff,
-        'input_filter_enabled': reverb.input_filter_enabled,
         'late_reflections_delay': reverb.late_reflections_delay,
         'late_reflections_diffusion': reverb.late_reflections_diffusion,
-        # 'late_reflections_hf_reference':
-        # reverb.late_reflections_hf_reference,
+        'late_reflections_hf_reference': reverb.late_reflections_hf_reference,
         'late_reflections_hf_rolloff': reverb.late_reflections_hf_rolloff,
         'late_reflections_lf_reference': reverb.late_reflections_lf_reference,
         'late_reflections_lf_rolloff': reverb.late_reflections_lf_rolloff,

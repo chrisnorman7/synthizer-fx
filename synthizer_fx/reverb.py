@@ -4,7 +4,7 @@ from typing import Dict, Union
 
 from synthizer import Context, GlobalFdnReverb
 
-ReverbValue = Union[bool, float, str]
+ReverbValue = Union[float, str]
 ReverbDict = Dict[str, ReverbValue]
 
 
@@ -37,6 +37,20 @@ def reverb_to_dict(
     }
 
 
+def update_reverb(reverb: GlobalFdnReverb, data: ReverbDict) -> None:
+    """Update the properties of ``reverb`` with values from ``data``.
+
+    :param reverb: The reverb to modify.
+
+    :param data: The dictionary to get data from.
+    """
+    name: str
+    value: ReverbValue
+    for name, value in data.items():
+        if name != 'name':
+            setattr(reverb, name, value)
+
+
 def reverb_from_dict(context: Context, data: ReverbDict) -> GlobalFdnReverb:
     """Return a reverb preset from the provided data.
 
@@ -45,9 +59,5 @@ def reverb_from_dict(context: Context, data: ReverbDict) -> GlobalFdnReverb:
     :param data: The data to load from.
     """
     reverb: GlobalFdnReverb = GlobalFdnReverb(context)
-    name: str
-    value: ReverbValue
-    for name, value in data.items():
-        if name != 'name':
-            setattr(reverb, name, value)
+    update_reverb(reverb, data)
     return reverb
